@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>旅行先診断（予算・人数対応版）</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --sub: #6b7280;
+      --accent: #2563eb;
+      --accent-weak: #dbeafe;
+      --border: #d8e0ea;
+      --ok: #15803d;
+      --warn: #b45309;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: linear-gradient(180deg, #eef4ff 0%, #f6f8fb 40%, #fbfbfd 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 5vw, 42px);
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--sub);
+      font-size: 15px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel, .results {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 22px;
+      position: sticky;
+      top: 20px;
+    }
+
+    .results {
+      padding: 22px;
+      min-height: 600px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      margin: 0 0 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+    }
+
+    .inline-note {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--sub);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: white;
+      flex: 1;
+    }
+
+    .primary:hover {
+      opacity: 0.94;
+      transform: translateY(-1px);
+    }
+
+    .secondary {
+      background: #eef2f7;
+      color: var(--text);
+    }
+
+    .secondary:hover {
+      background: #e4ebf4;
+    }
+
+    .summary {
+      background: linear-gradient(135deg, #eef5ff, #f8fbff);
+      border: 1px solid #cfe0ff;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .summary h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    .summary p {
+      margin: 0;
+      color: var(--sub);
+      font-size: 14px;
+    }
+
+    .cards {
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      background: white;
+      transition: 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .place-name {
+      font-size: 22px;
+      margin: 0;
+    }
+
+    .match-badge {
+      background: var(--accent-weak);
+      color: var(--accent);
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 8px 12px;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .desc {
+      margin: 0 0 12px;
+      color: var(--sub);
+      font-size: 14px;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tag {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      color: #374151;
+    }
+
+    .cost-box {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .cost-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fafcff;
+    }
+
+    .cost-label {
+      font-size: 12px;
+      color: var(--sub);
+      margin-bottom: 4px;
+    }
+
+    .cost-value {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .budget-status {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .within {
+      background: #ecfdf3;
+      color: var(--ok);
+      border: 1px solid #bbf7d0;
+    }
+
+    .over {
+      background: #fff7ed;
+      color: var(--warn);
+      border: 1px solid #fed7aa;
+    }
+
+    .reasons {
+      background: #fafafa;
+      border: 1px dashed #d1d5db;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+
+    .reasons strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .reasons ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #4b5563;
+      font-size: 14px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--sub);
+    }
+
+    .footnote {
+      margin-top: 14px;
+      color: var(--sub);
+      font-size: 12px;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .card-top {
+        flex-direction: column;
+      }
+      .cost-box {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>旅行先診断</h1>
+      <p>出発地・人数・予算・重視条件から、概算費用つきでおすすめ候補を表示します。</p>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <h2 class="section-title">条件を入力</h2>
+
+        <div class="form-group">
+          <label for="departure">出発地</label>
+          <select id="departure">
+            <option value="hokaido">北海道</option>
+            <option value="tohoku">東北</option>
+            <option value="kanto" selected>関東</option>
+            <option value="chubu">中部</option>
+            <option value="kansai">関西</option>
+            <option value="chugokuShikoku">中国・四国</option>
+            <option value="kyushuOkinawa">九州・沖縄</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="people">旅行人数</label>
+          <input id="people" type="number" min="1" max="12" value="2" />
+          <div class="inline-note">1室2名を基本として概算します。</div>
+        </div>
+
+        <div class="form-group">
+          <label for="budget">総予算</label>
+          <select id="budget">
+            <option value="40000">4万円以内</option>
+            <option value="70000">7万円以内</option>
+            <option value="100000" selected>10万円以内</option>
+            <option value="150000">15万円以内</option>
+            <option value="200000">20万円以内</option>
+            <option value="9999999">予算は広め</option>
+          </select>
+          <div class="inline-note">交通費＋宿泊費の概算総額で判定します。</div>
+        </div>
+
+        <div class="form-group">
+          <label for="priority">重視する条件</label>
+          <select id="priority">
+            <option value="都会">都会</option>
+            <option value="田舎">田舎</option>
+            <option value="自然">自然</option>
+            <option value="文化">文化</option>
+            <option value="食事" selected>食事</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="searchBtn">候補を見る</button>
+          <button class="secondary" id="resetBtn" type="button">リセット</button>
+        </div>
+
+        <p class="footnote">
+          ※ 金額は診断用の相場推定です。実際の旅行代金は時期・予約タイミング・交通手段・ホテルランクで変わります。
+        </p>
+      </aside>
+
+      <main class="results">
+        <div class="summary">
+          <h2>診断結果</h2>
+          <p>条件を入力すると、予算との相性と希望条件を踏まえたおすすめ候補を上位5件表示します。</p>
+        </div>
+        <div id="resultArea" class="empty">まだ結果は表示されていません。</div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const REGION_LABELS = {
+      hokaido: "北海道",
+      tohoku: "東北",
+      kanto: "関東",
+      chubu: "中部",
+      kansai: "関西",
+      chugokuShikoku: "中国・四国",
+      kyushuOkinawa: "九州・沖縄"
+    };
+
+    // 地域間の交通費ベース（1人あたり、往復の概算）
+    // 診断用途の概算。新幹線・特急・飛行機・高速バス等をまとめた距離ベースの相場。
+    const transportBase = {
+      hokaido:         { hokaido: 12000, tohoku: 18000, kanto: 28000, chubu: 33000, kansai: 38000, chugokuShikoku: 43000, kyushuOkinawa: 50000 },
+      tohoku:          { hokaido: 18000, tohoku: 10000, kanto: 14000, chubu: 20000, kansai: 26000, chugokuShikoku: 32000, kyushuOkinawa: 38000 },
+      kanto:           { hokaido: 28000, tohoku: 14000, kanto:  7000, chubu: 12000, kansai: 18000, chugokuShikoku: 26000, kyushuOkinawa: 34000 },
+      chubu:           { hokaido: 33000, tohoku: 20000, kanto: 12000, chubu:  7000, kansai: 12000, chugokuShikoku: 18000, kyushuOkinawa: 28000 },
+      kansai:          { hokaido: 38000, tohoku: 26000, kanto: 18000, chubu: 12000, kansai:  7000, chugokuShikoku: 12000, kyushuOkinawa: 22000 },
+      chugokuShikoku:  { hokaido: 43000, tohoku: 32000, kanto: 26000, chubu: 18000, kansai: 12000, chugokuShikoku:  7000, kyushuOkinawa: 16000 },
+      kyushuOkinawa:   { hokaido: 50000, tohoku: 38000, kanto: 34000, chubu: 28000, kansai: 22000, chugokuShikoku: 16000, kyushuOkinawa:  8000 }
+    };
+
+    // 1室1泊の目安
+    // 2025年のビジネス・シティホテル平均客室単価 16,975円を基準に、
+    // 温泉地・人気観光地・地方都市で補正した診断用レンジ。
+    const lodgingTierRate = {
+      low: 12000,
+      mid: 17000,
+      high: 23000,
+      resort: 28000
+    };
+
+    const places = [
+      {
+        name: "帯広",
+        region: "hokaido",
+        nights: 2,
+        lodgingTier: "mid",
+        remoteExtra: 5000,
+        tags: ["田舎", "自然", "食事"],
+        description: "十勝グルメと広い景色が魅力。自然と食を両立しやすい。"
+      },
+      {
+        name: "弘前",
+        region: "tohoku",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 1000,
+        tags: ["田舎", "文化", "食事"],
+        description: "桜や城下町の雰囲気が良く、文化系の小旅行に向く。"
+      },
+      {
+        name: "那須塩原",
+        region: "kanto",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 1000,
+        tags: ["田舎", "自然"],
+        description: "高原・温泉・自然のバランスが良く、穏やかに過ごしやすい。"
+      },
+      {
+        name: "富山",
+        region: "chubu",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 1000,
+        tags: ["自然", "食事", "文化"],
+        description: "海の幸と山の景色の両方を楽しめる、食に強い地方都市。"
+      },
+      {
+        name: "諏訪",
+        region: "chubu",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 0,
+        tags: ["田舎", "自然", "文化"],
+        description: "湖と神社、落ち着いた空気感が魅力。静かな旅向け。"
+      },
+      {
+        name: "東京",
+        region: "kanto",
+        nights: 1,
+        lodgingTier: "high",
+        remoteExtra: 0,
+        tags: ["都会", "文化", "食事"],
+        description: "選択肢が圧倒的に多い都市型旅行の王道。"
+      },
+      {
+        name: "浜松",
+        region: "chubu",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 0,
+        tags: ["食事", "都会", "自然"],
+        description: "都市・海・グルメのバランスが良く、予算も比較的組みやすい。"
+      },
+      {
+        name: "伊勢",
+        region: "kansai",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 1000,
+        tags: ["文化", "食事"],
+        description: "神宮参拝と街歩きを楽しめる、文化寄りの定番。"
+      },
+      {
+        name: "京都",
+        region: "kansai",
+        nights: 1,
+        lodgingTier: "high",
+        remoteExtra: 0,
+        tags: ["文化", "都会", "食事"],
+        description: "寺社・街並み・和文化を満喫できる王道の文化都市。"
+      },
+      {
+        name: "大阪",
+        region: "kansai",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 0,
+        tags: ["都会", "食事"],
+        description: "食とにぎやかさを重視するなら非常に強い候補。"
+      },
+      {
+        name: "神戸",
+        region: "kansai",
+        nights: 1,
+        lodgingTier: "high",
+        remoteExtra: 0,
+        tags: ["都会", "文化", "食事"],
+        description: "おしゃれな街歩きと港町の雰囲気が魅力。"
+      },
+      {
+        name: "鳥取",
+        region: "chugokuShikoku",
+        nights: 1,
+        lodgingTier: "low",
+        remoteExtra: 2000,
+        tags: ["田舎", "自然"],
+        description: "砂丘や海景色が魅力。混みすぎない自然旅向き。"
+      },
+      {
+        name: "長門",
+        region: "chugokuShikoku",
+        nights: 2,
+        lodgingTier: "mid",
+        remoteExtra: 3000,
+        tags: ["田舎", "自然"],
+        description: "海景色と静けさが魅力。ゆったり癒やされたい人向け。"
+      },
+      {
+        name: "倉敷",
+        region: "chugokuShikoku",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 0,
+        tags: ["文化", "田舎"],
+        description: "美観地区の街並みが美しく、短期旅行でも満足しやすい。"
+      },
+      {
+        name: "高知",
+        region: "chugokuShikoku",
+        nights: 2,
+        lodgingTier: "mid",
+        remoteExtra: 2000,
+        tags: ["自然", "食事", "田舎"],
+        description: "海・川・食の満足度が高く、自然派にもグルメ派にも向く。"
+      },
+      {
+        name: "道後温泉",
+        region: "chugokuShikoku",
+        nights: 1,
+        lodgingTier: "high",
+        remoteExtra: 1000,
+        tags: ["文化", "田舎"],
+        description: "温泉街らしい風情があり、落ち着いた街並みも魅力。"
+      },
+      {
+        name: "博多",
+        region: "kyushuOkinawa",
+        nights: 1,
+        lodgingTier: "mid",
+        remoteExtra: 0,
+        tags: ["都会", "食事"],
+        description: "屋台やラーメンなど食の強さとアクセスの良さが魅力。"
+      },
+      {
+        name: "別府",
+        region: "kyushuOkinawa",
+        nights: 1,
+        lodgingTier: "high",
+        remoteExtra: 1000,
+        tags: ["田舎", "食事"],
+        description: "温泉で有名だが、街歩きとローカルグルメも楽しめる。"
+      },
+      {
+        name: "湯布院",
+        region: "kyushuOkinawa",
+        nights: 1,
+        lodgingTier: "resort",
+        remoteExtra: 2000,
+        tags: ["田舎", "自然", "文化"],
+        description: "自然と上質感があり、落ち着いた非日常を味わいやすい。"
+      },
+      {
+        name: "鹿児島",
+        region: "kyushuOkinawa",
+        nights: 2,
+        lodgingTier: "mid",
+        remoteExtra: 3000,
+        tags: ["自然", "食事", "都会"],
+        description: "桜島や黒豚など、自然・都市・食のバランスが良い。"
+      },
+      {
+        name: "奄美",
+        region: "kyushuOkinawa",
+        nights: 2,
+        lodgingTier: "resort",
+        remoteExtra: 12000,
+        tags: ["自然", "田舎"],
+        description: "海と自然の非日常感が非常に強い、遠方リゾート系の候補。"
+      }
+    ];
+
+    const resultArea = document.getElementById("resultArea");
+    const searchBtn = document.getElementById("searchBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    searchBtn.addEventListener("click", runDiagnosis);
+    resetBtn.addEventListener("click", resetForm);
+
+    function formatYen(value) {
+      return "¥" + Math.round(value).toLocaleString("ja-JP");
+    }
+
+    function getRoomCount(people) {
+      return Math.ceil(people / 2);
+    }
+
+    function calcTransportPerPerson(fromRegion, place) {
+      const base = transportBase[fromRegion][place.region];
+      return base + place.remoteExtra;
+    }
+
+    function calcLodgingTotal(place, people) {
+      const roomRate = lodgingTierRate[place.lodgingTier];
+      const rooms = getRoomCount(people);
+      return roomRate * place.nights * rooms;
+    }
+
+    function budgetLabel(maxBudget) {
+      if (maxBudget >= 9999999) return "予算広め";
+      return formatYen(maxBudget);
+    }
+
+    function scorePlace(place, conditions) {
+      const transportPerPerson = calcTransportPerPerson(conditions.departure, place);
+      const transportTotal = transportPerPerson * conditions.people;
+      const lodgingTotal = calcLodgingTotal(place, conditions.people);
+      const totalCost = transportTotal + lodgingTotal;
+      const perPersonCost = totalCost / conditions.people;
+
+      let score = 0;
+      const reasons = [];
+
+      // 重視条件
+      if (place.tags.includes(conditions.priority)) {
+        score += 38;
+        reasons.push(`「${conditions.priority}」重視に合う`);
+      }
+
+      // 予算適合
+      if (totalCost <= conditions.budget) {
+        score += 30;
+        reasons.push("総予算に収まりやすい");
+      } else if (totalCost <= conditions.budget * 1.15) {
+        score += 12;
+        reasons.push("予算にかなり近い");
+      } else if (totalCost <= conditions.budget * 1.35) {
+        score += 4;
+      }
+
+      // 出発地との相性（近いほうが高い）
+      const diff = Math.max(0, 55000 - transportPerPerson);
+      score += diff / 2200;
+
+      // 安さボーナス
+      score += Math.max(0, 32000 - perPersonCost) / 1800;
+
+      // 定番ボーナス
+      if (["東京", "京都", "大阪", "博多"].includes(place.name)) {
+        score += 3;
+      }
+
+      // 旅程の短さを好む一般ユーザー向けに1泊系を少し優遇
+      if (place.nights === 1) {
+        score += 4;
+      }
+
+      // 補足理由
+      if (place.nights === 1) reasons.push("1泊2日でも組みやすい");
+      if (transportPerPerson <= 14000) reasons.push("交通費を抑えやすい");
+      if (place.tags.includes("食事") && conditions.priority !== "食事") reasons.push("食の満足度も期待しやすい");
+      if (place.tags.includes("文化") && conditions.priority !== "文化") reasons.push("観光の見どころが多い");
+      if (place.tags.includes("自然") && conditions.priority !== "自然") reasons.push("景色や自然も楽しめる");
+
+      return {
+        ...place,
+        score: Math.round(score),
+        transportPerPerson,
+        transportTotal,
+        lodgingTotal,
+        totalCost,
+        perPersonCost,
+        reasons: reasons.slice(0, 4)
+      };
+    }
+
+    function runDiagnosis() {
+      const conditions = {
+        departure: document.getElementById("departure").value,
+        people: Math.max(1, Math.min(12, Number(document.getElementById("people").value) || 1)),
+        budget: Number(document.getElementById("budget").value),
+        priority: document.getElementById("priority").value
+      };
+
+      const ranked = places
+        .map(place => scorePlace(place, conditions))
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.totalCost - b.totalCost;
+        })
+        .slice(0, 5);
+
+      renderResults(ranked, conditions);
+    }
+
+    function renderResults(results, conditions) {
+      const summaryHtml = `
+        <div class="summary">
+          <h2>おすすめ候補</h2>
+          <p>
+            出発地: ${REGION_LABELS[conditions.departure]} /
+            人数: ${conditions.people}人 /
+            総予算: ${budgetLabel(conditions.budget)} /
+            重視条件: ${conditions.priority}
+          </p>
+        </div>
+      `;
+
+      const cardsHtml = results.map((place, index) => {
+        const withinBudget = place.totalCost <= conditions.budget;
+        const budgetGap = place.totalCost - conditions.budget;
+
+        return `
+          <article class="card">
+            <div class="card-top">
+              <div>
+                <div style="font-size:12px;color:#6b7280;font-weight:700;margin-bottom:4px;">候補 ${index + 1}</div>
+                <h3 class="place-name">${place.name}</h3>
+              </div>
+              <div class="match-badge">おすすめ度 ${place.score}</div>
+            </div>
+
+            <p class="desc">${place.description}</p>
+
+            <div class="tag-list">
+              ${place.tags.map(tag => `<span class="tag">${tag}</span>`).join("")}
+              <span class="tag">${place.nights}泊想定</span>
+              <span class="tag">${REGION_LABELS[place.region]}</span>
+            </div>
+
+            <div class="cost-box">
+              <div class="cost-item">
+                <div class="cost-label">交通費（合計）</div>
+                <div class="cost-value">${formatYen(place.transportTotal)}</div>
+              </div>
+              <div class="cost-item">
+                <div class="cost-label">宿泊費（合計）</div>
+                <div class="cost-value">${formatYen(place.lodgingTotal)}</div>
+              </div>
+              <div class="cost-item">
+                <div class="cost-label">概算総額</div>
+                <div class="cost-value">${formatYen(place.totalCost)}</div>
+              </div>
+            </div>
+
+            <div style="font-size:14px; color:#4b5563;">
+              1人あたり目安: <strong>${formatYen(place.perPersonCost)}</strong>
+            </div>
+
+            <div class="budget-status ${withinBudget ? "within" : "over"}">
+              ${
+                withinBudget
+                  ? `予算内に収まりそう`
+                  : `予算を約 ${formatYen(budgetGap)} 超える見込み`
+              }
+            </div>
+
+            <div class="reasons">
+              <strong>おすすめ理由</strong>
+              <ul>
+                ${place.reasons.map(reason => `<li>${reason}</li>`).join("")}
+              </ul>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      resultArea.innerHTML = summaryHtml + `<div class="cards">${cardsHtml}</div>`;
+    }
+
+    function resetForm() {
+      document.getElementById("departure").value = "kanto";
+      document.getElementById("people").value = 2;
+      document.getElementById("budget").value = 100000;
+      document.getElementById("priority").value = "食事";
+      resultArea.innerHTML = `<div class="empty">まだ結果は表示されていません。</div>`;
+    }
+
+    runDiagnosis();
+  </script>
+</body>
+</html>
